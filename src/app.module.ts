@@ -11,15 +11,6 @@ import { TestClass } from './test.service';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    MongooseModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        uri: configService.get('MONGO_URI'),
-      }),
-      inject: [ConfigService],
-    }),
-
-    MongooseModule.forFeature([{ name: Message.name, schema: MessageSchema }]),
   ],
   controllers: [AppController],
   providers: [AppService, TestClass],

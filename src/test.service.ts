@@ -1,77 +1,27 @@
 import { ConfigService } from '@nestjs/config';
-import { InjectModel } from '@nestjs/mongoose';
-import { ChatCompletionRequestMessage, Configuration, OpenAIApi } from 'openai';
 import { Observable, share } from 'rxjs';
-import { Message, MessageDocument } from './test.schema';
-import mongoose, { Model } from 'mongoose';
 import { Injectable } from '@nestjs/common';
+import OpenAI from 'openai';
+import { ChatCompletionMessageParam } from 'openai/resources';
 
 @Injectable()
 export class TestClass {
-  gpt: OpenAIApi;
+  
+  private readonly openai: OpenAI;
+
   constructor(
     private readonly configService: ConfigService,
-    @InjectModel(Message.name)
-    private readonly messageModel: Model<MessageDocument>,
-  ) {
-    this.gpt = new OpenAIApi(
-      new Configuration({
-        apiKey: process.env.OPENAI_API_KEY,
-      }),
-    );
-  }
+    ){
+      this.openai = new OpenAI({apiKey: 'apikey'})
+    }
 
-  async streamTest(message: ChatCompletionRequestMessage[], socket: any): Promise<Observable<unknown>> {
-    let chunk: string = '';
-    return new Observable((subscriber) => {
-      this.gpt
-        .createChatCompletion(
-          {
-            model: 'gpt-3.5-turbo',
-            messages: message,
-            stream: true,
-          },
-          { responseType: 'stream' },
-        )
-        .then((res) => {
-          socket.on('close', () => {
-            res.data['destroy']();
-          });
-          res.data['on']('data', async (data: Buffer) => {
-            const lines = data
-              .toString()
-              .split('\n')
-              .filter((line: string) => line.trim() !== '');
-
-            lines.forEach((line: string) => {
-              const message = line.replace(/data: /, '');
-              if (message === '[DONE]') {
-                subscriber.complete();
-                return;
-              }
-
-              try {
-                const parsed = JSON.parse(message);
-                const data = parsed.choices[0].delta.content;
-
-                if (!data) {
-                  return;
-                }
-
-                chunk += data;
-
-                chunk.slice(0, 1);
-                subscriber.next({ data: { model: 'gpt-3.5-turbo', chunk } });
-                chunk = '';
-              } catch (err) {
-                console.error('Could not JSON parse stream message', message, err);
-              }
-            });
-          });
-        })
-        .catch((err) => {
-          subscriber.error({ error: err });
-        });
-    }).pipe(share());
+  async streamTest(message: Array<ChatCompletionMessageParam>) {
+    const completion = this.openai.chat.completions.create({
+      messages: message,
+      model:'gpt-3.5-turbo',
+      stream: true
+    })
+    
+    return completion;
   }
 }

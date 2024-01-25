@@ -1,12 +1,12 @@
-import { Controller, Get, Param, Req, Sse } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, Sse } from '@nestjs/common';
 import { AppService } from './app.service';
 
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) {}
-  @Get('stream')
+  @Post('stream')
   @Sse()
-  async getStream(@Req() req: Request) {
-    return await this.appService.getStream(req['socket'], req.body);
+  async postStream(@Body() {content}: {content:string}) {
+    return await this.appService.getStream(content);
   }
 }
